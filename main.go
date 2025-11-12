@@ -15,6 +15,9 @@ func main() {
 		Handler: ServeMux,
 	}
 
+	fs := http.FileServer(http.Dir("."))
+	ServeMux.Handle("/", fs)
+
 	// Start the server
 	log.Printf("Serving on port: 8080\n")
 	log.Fatal(server.ListenAndServe())
