@@ -16,7 +16,13 @@ func main() {
 	}
 
 	fs := http.FileServer(http.Dir("."))
-	ServeMux.Handle("/", fs)
+	ServeMux.Handle("/app/", http.StripPrefix("/app/", fs))
+
+	ServeMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(200)
+		w.Write([]byte("OK"))
+	})
 
 	// Start the server
 	log.Printf("Serving on port: 8080\n")
