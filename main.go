@@ -3,7 +3,13 @@ package main
 import (
 	"log"
 	"net/http"
+	"fmt"
+	"sync/atomic"
 )
+
+type apiConfig struct {
+	fileserverHits atomic.Int32
+}
 
 func main() {
 	// Creating a new ServeMux
@@ -16,15 +22,30 @@ func main() {
 	}
 
 	fs := http.FileServer(http.Dir("."))
-	ServeMux.Handle("/app/", http.StripPrefix("/app/", fs))
-
-	ServeMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-    w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(200)
-		w.Write([]byte("OK"))
-	})
+	apiCfg := &apiConfig{}
+	ServeMux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", fs)))
+	ServeMux.HandleFunc("/healthz", handlerReadiness)
+	ServeMux.HandleFunc("/metrics", apiCfg.handlerMetrics)
+	ServeMux.HandleFunc("/reset", apiCfg.handlerReset)
 
 	// Start the server
 	log.Printf("Serving on port: 8080\n")
 	log.Fatal(server.ListenAndServe())
+}
+
+func handlerReadiness(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(http.StatusText(http.StatusOK)))
+}
+
+func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
+	count := cfg.fileserverHits.Load()
+	fmt.Fprintf(w, "Hits: %d", count)
+}
+
+func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	cfg.fileserverHits.Store(0)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hits reset to 0"))
 }
