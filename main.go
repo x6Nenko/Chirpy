@@ -24,9 +24,9 @@ func main() {
 	fs := http.FileServer(http.Dir("."))
 	apiCfg := &apiConfig{}
 	ServeMux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", fs)))
-	ServeMux.HandleFunc("/healthz", handlerReadiness)
-	ServeMux.HandleFunc("/metrics", apiCfg.handlerMetrics)
-	ServeMux.HandleFunc("/reset", apiCfg.handlerReset)
+	ServeMux.HandleFunc("GET /api/healthz", handlerReadiness)
+	ServeMux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
+	ServeMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 
 	// Start the server
 	log.Printf("Serving on port: 8080\n")
@@ -40,8 +40,15 @@ func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	count := cfg.fileserverHits.Load()
-	fmt.Fprintf(w, "Hits: %d", count)
+	template := `<html>
+	<body>
+		<h1>Welcome, Chirpy Admin</h1>
+		<p>Chirpy has been visited %d times!</p>
+	</body>
+</html>`
+	fmt.Fprintf(w, template, count)
 }
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
