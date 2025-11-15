@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	_ "github.com/lib/pq"
 	"github.com/joho/godotenv"
+	"github.com/google/uuid"
+	"time"
 	"os"
 	"database/sql"
 	"github.com/x6Nenko/Chirpy/internal/database"
@@ -14,7 +16,15 @@ import (
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
-	dbQueries  *database.Queries
+	dbQueries  		 *database.Queries
+	platform 			 string
+}
+
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 func main() {
@@ -23,6 +33,11 @@ func main() {
 	if dbURL == "" {
 		log.Fatal("DB_URL must be set")
 	}
+	platformEnv := os.Getenv("PLATFORM")
+	if platformEnv == "" {
+		log.Fatal("PLATFORM must be set")
+	}
+
 	dbConn, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error opening database: %s", err)
@@ -31,6 +46,7 @@ func main() {
 	apiCfg := &apiConfig{
 		fileserverHits: atomic.Int32{},
 		dbQueries: 			queries,
+		platform:				platformEnv,
 	}
 
 	// Creating a new ServeMux
@@ -46,6 +62,7 @@ func main() {
 	ServeMux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", fs)))
 	ServeMux.HandleFunc("GET /api/healthz", handlerReadiness)
 	ServeMux.HandleFunc("POST /api/validate_chirp", apiCfg.handlerValidateChirp)
+	ServeMux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
 	ServeMux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	ServeMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 
@@ -73,7 +90,21 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Reset is only allowed in dev environment."))
+		return
+	}
+
 	cfg.fileserverHits.Store(0)
+
+	err := cfg.dbQueries.Reset(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to reset the database: " + err.Error()))
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Hits reset to 0"))
+	w.Write([]byte("Hits reset to 0 and database reset to initial state."))
 }
