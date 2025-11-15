@@ -62,6 +62,7 @@ func main() {
 	ServeMux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", fs)))
 	ServeMux.HandleFunc("GET /api/healthz", handlerReadiness)
 	ServeMux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
+	ServeMux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerChirpsGetOne)
 	ServeMux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsGetAll)
 	ServeMux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
 	ServeMux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)

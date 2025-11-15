@@ -78,3 +78,30 @@ func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request
 
 	respondWithJSON(w, 200, convertedChirps)
 }
+
+func (cfg *apiConfig) handlerChirpsGetOne(w http.ResponseWriter, r *http.Request) {
+	chirpIdString := r.PathValue("chirpID") // String literal matches {chirpID} from route
+
+	// Parse a UUID string
+	chirpID, err := uuid.Parse(chirpIdString)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't parse UUID string", err)
+		return
+	}
+
+	chirp, err := cfg.dbQueries.GetOneChirp(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, 404, "Couldn't get chirp", err)
+		return
+	}
+
+	convertedChirp := Chirp{
+    ID:        chirp.ID,
+    CreatedAt: chirp.CreatedAt,
+    UpdatedAt: chirp.UpdatedAt,
+    Body:      chirp.Body,
+		UserID:		 chirp.UserID,
+	}
+
+	respondWithJSON(w, 200, convertedChirp)
+}
