@@ -5,13 +5,34 @@ import (
 	"net/http"
 	"fmt"
 	"sync/atomic"
+	_ "github.com/lib/pq"
+	"github.com/joho/godotenv"
+	"os"
+	"database/sql"
+	"github.com/x6Nenko/Chirpy/internal/database"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	dbQueries  *database.Queries
 }
 
 func main() {
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL must be set")
+	}
+	dbConn, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error opening database: %s", err)
+	}
+	queries := database.New(dbConn)
+	apiCfg := &apiConfig{
+		fileserverHits: atomic.Int32{},
+		dbQueries: 			queries,
+	}
+
 	// Creating a new ServeMux
 	ServeMux := http.NewServeMux()
 
@@ -22,7 +43,6 @@ func main() {
 	}
 
 	fs := http.FileServer(http.Dir("."))
-	apiCfg := &apiConfig{}
 	ServeMux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", fs)))
 	ServeMux.HandleFunc("GET /api/healthz", handlerReadiness)
 	ServeMux.HandleFunc("POST /api/validate_chirp", apiCfg.handlerValidateChirp)
