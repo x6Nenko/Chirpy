@@ -27,12 +27,12 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	mainUser := User{
+	convertedUser := User{
     ID:        user.ID,
     CreatedAt: user.CreatedAt,
     UpdatedAt: user.UpdatedAt,
     Email:     user.Email,
 	}
 
-	respondWithJSON(w, 201, mainUser)
+	respondWithJSON(w, 201, convertedUser)
 }
