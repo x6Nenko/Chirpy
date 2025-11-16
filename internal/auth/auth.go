@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 	"time"
 	"errors"
+	"strings"
+	"net/http"
 )
 
 type TokenType string
@@ -69,4 +71,18 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 
 	return id, nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", errors.New("no authorization header found")
+	}
+
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+    return "", errors.New("header exists but doesn't have Bearer")
+	}
+
+	tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	return tokenString, nil
 }

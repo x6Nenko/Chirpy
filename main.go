@@ -18,6 +18,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries  		 *database.Queries
 	platform 			 string
+	jwtSecret 				 string
 }
 
 type User struct {
@@ -37,6 +38,10 @@ func main() {
 	if platformEnv == "" {
 		log.Fatal("PLATFORM must be set")
 	}
+	secretEnv := os.Getenv("SECRET")
+	if secretEnv == "" {
+		log.Fatal("SECRET must be set")
+	}
 
 	dbConn, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -47,6 +52,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		dbQueries: 			queries,
 		platform:				platformEnv,
+		jwtSecret:			secretEnv,
 	}
 
 	// Creating a new ServeMux
@@ -61,11 +67,14 @@ func main() {
 	fs := http.FileServer(http.Dir("."))
 	ServeMux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", fs)))
 	ServeMux.HandleFunc("GET /api/healthz", handlerReadiness)
+
 	ServeMux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
 	ServeMux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerChirpsGetOne)
 	ServeMux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsGetAll)
+
 	ServeMux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
 	ServeMux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
+
 	ServeMux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	ServeMux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 
