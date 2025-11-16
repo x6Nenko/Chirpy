@@ -71,6 +71,7 @@ func main() {
 	ServeMux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
 	ServeMux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerChirpsGetOne)
 	ServeMux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsGetAll)
+	ServeMux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerChirpsDelete)
 
 	ServeMux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
 	ServeMux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
