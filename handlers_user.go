@@ -42,10 +42,11 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 	}
 
 	convertedUser := User{
-    ID:        user.ID,
-    CreatedAt: user.CreatedAt,
-    UpdatedAt: user.UpdatedAt,
-    Email:     user.Email,
+    ID:          user.ID,
+    CreatedAt:   user.CreatedAt,
+    UpdatedAt:   user.UpdatedAt,
+    Email:       user.Email,
+    IsChirpyRed: user.IsChirpyRed,
 	}
 
 	respondWithJSON(w, 201, convertedUser)
@@ -118,10 +119,11 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	// Step 7: Logged in
 	convertedUser := response{
     User: User{
-			ID:        user.ID,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-			Email:     user.Email,
+			ID:          user.ID,
+			CreatedAt:   user.CreatedAt,
+			UpdatedAt:   user.UpdatedAt,
+			Email:       user.Email,
+			IsChirpyRed: user.IsChirpyRed,
     },
     Token: 				jwtToken,
 		RefreshToken: savedRefreshTokenEntry.Token,
@@ -244,10 +246,11 @@ func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request)
 	}
 
 	convertedUser := User{
-    ID:        user.ID,
-    CreatedAt: user.CreatedAt,
-    UpdatedAt: user.UpdatedAt,
-    Email:     user.Email,
+    ID:          user.ID,
+    CreatedAt:   user.CreatedAt,
+    UpdatedAt:   user.UpdatedAt,
+    Email:       user.Email,
+    IsChirpyRed: user.IsChirpyRed,
 	}
 
 	respondWithJSON(w, 200, convertedUser)
