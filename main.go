@@ -18,7 +18,8 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries  		 *database.Queries
 	platform 			 string
-	jwtSecret 				 string
+	jwtSecret 		 string
+	polkaKey			 string
 }
 
 type User struct {
@@ -43,6 +44,10 @@ func main() {
 	if secretEnv == "" {
 		log.Fatal("SECRET must be set")
 	}
+	polkaKeyEnv := os.Getenv("POLKA_KEY")
+	if polkaKeyEnv == "" {
+		log.Fatal("POLKA_KEY must be set")
+	}
 
 	dbConn, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -54,6 +59,7 @@ func main() {
 		dbQueries: 			queries,
 		platform:				platformEnv,
 		jwtSecret:			secretEnv,
+		polkaKey:				polkaKeyEnv,
 	}
 
 	// Creating a new ServeMux
