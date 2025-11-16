@@ -7,6 +7,7 @@ import (
 	"github.com/x6Nenko/Chirpy/internal/auth"
 	"github.com/google/uuid"
 	"time"
+	"sort"
 )
 
 type Chirp struct {
@@ -73,51 +74,49 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 
 func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request) {
 	authorIDString := r.URL.Query().Get("author_id")
-	
+	sortOrder := r.URL.Query().Get("sort")
+
+	var dbChirps []database.Chirp
+	var err error
+
 	if authorIDString != "" {
 		// authorID was provided as query parameter
 		// Parse a UUID string
-		authorID, err := uuid.Parse(authorIDString)
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Couldn't parse UUID string", err)
+		authorID, parseErr := uuid.Parse(authorIDString)
+		if parseErr != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't parse UUID string", parseErr)
 			return
 		}
 
-		allChirpsByAuthor, err := cfg.dbQueries.GetAllChirpsByAuthor(r.Context(), authorID)
+		dbChirps, err = cfg.dbQueries.GetAllChirpsByAuthor(r.Context(), authorID)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't get all chirps by author", err)
 			return
 		}
-
-		convertedChirps := []Chirp{}
-		for _, chirp := range allChirpsByAuthor {
-			convertedChirps = append(convertedChirps, Chirp{
-				ID:        chirp.ID,
-				CreatedAt: chirp.CreatedAt,
-				UpdatedAt: chirp.UpdatedAt,
-				Body:      chirp.Body,
-				UserID:		 chirp.UserID,
-			})
+	} else {
+		dbChirps, err = cfg.dbQueries.GetAllChirps(r.Context())
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't get all chirps", err)
+			return
 		}
-
-		respondWithJSON(w, 200, convertedChirps)
-		return
 	}
 
-	allChirps, err := cfg.dbQueries.GetAllChirps(r.Context())
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get all chirps", err)
-		return
-	}
-
+	// Convert database chirps to API chirps
 	convertedChirps := []Chirp{}
-	for _, chirp := range allChirps {
+	for _, chirp := range dbChirps {
 		convertedChirps = append(convertedChirps, Chirp{
 			ID:        chirp.ID,
 			CreatedAt: chirp.CreatedAt,
 			UpdatedAt: chirp.UpdatedAt,
 			Body:      chirp.Body,
-			UserID:		 chirp.UserID,
+			UserID:    chirp.UserID,
+		})
+	}
+
+	// Apply sorting if requested
+	if sortOrder == "desc" {
+		sort.Slice(convertedChirps, func(i, j int) bool {
+			return convertedChirps[i].CreatedAt.After(convertedChirps[j].CreatedAt)
 		})
 	}
 
