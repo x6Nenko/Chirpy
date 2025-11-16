@@ -194,3 +194,61 @@ func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)  // 204
 }
+
+func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request) {
+	// Step 1: Define what you expect to receive
+	type parameters struct {
+		Email string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	// Step 2. Get auth token from headers
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "Couldn't get bearer token", err)
+		return
+	}
+
+	// Step 3. Check if token is valid
+	userID, err := auth.ValidateJWT(tokenString, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, 401, "Unauthorized", err)
+		return
+	}
+
+	// Step 4: Decode the request body
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err = decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
+		return
+	}
+
+	// Step 5: Hash pass
+	hashedPass, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't hash password", err)
+		return
+	}
+
+	// Step 6: Update user
+	user, err := cfg.dbQueries.UpdateUser(r.Context(), database.UpdateUserParams{
+		Email:    			params.Email,
+		HashedPassword: hashedPass,
+		ID:					userID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't update user", err)
+		return
+	}
+
+	convertedUser := User{
+    ID:        user.ID,
+    CreatedAt: user.CreatedAt,
+    UpdatedAt: user.UpdatedAt,
+    Email:     user.Email,
+	}
+
+	respondWithJSON(w, 200, convertedUser)
+}
