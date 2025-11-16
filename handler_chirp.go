@@ -72,6 +72,38 @@ func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request
 }
 
 func (cfg *apiConfig) handlerChirpsGetAll(w http.ResponseWriter, r *http.Request) {
+	authorIDString := r.URL.Query().Get("author_id")
+	
+	if authorIDString != "" {
+		// authorID was provided as query parameter
+		// Parse a UUID string
+		authorID, err := uuid.Parse(authorIDString)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't parse UUID string", err)
+			return
+		}
+
+		allChirpsByAuthor, err := cfg.dbQueries.GetAllChirpsByAuthor(r.Context(), authorID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't get all chirps by author", err)
+			return
+		}
+
+		convertedChirps := []Chirp{}
+		for _, chirp := range allChirpsByAuthor {
+			convertedChirps = append(convertedChirps, Chirp{
+				ID:        chirp.ID,
+				CreatedAt: chirp.CreatedAt,
+				UpdatedAt: chirp.UpdatedAt,
+				Body:      chirp.Body,
+				UserID:		 chirp.UserID,
+			})
+		}
+
+		respondWithJSON(w, 200, convertedChirps)
+		return
+	}
+
 	allChirps, err := cfg.dbQueries.GetAllChirps(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get all chirps", err)
